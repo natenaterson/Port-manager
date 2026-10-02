@@ -9,17 +9,17 @@ def packet_callback(packet):
         src_ip = packet[IP].src
         dst_ip = packet[IP].dst
         
-        log_line = f"Packet: {src_ip} -> {dst_ip}\n"
-        print(log_line.strip())
         
-        #if packet.haslayer(ICMP):
-        #	print(log_line.strip())
-        #elif packet.haslayer(TCP):
-        #	print(packet[TCP].sport)
-        #	print(packet[TCP].dport)
-        #elif packet.haslayer(UDP):
-        #	print(packet[UDP].sport)
-        #	print(packet[UDP].dport)
+        
+        if packet.haslayer(ICMP):
+        	log_line = f"ICMP Packet: {src_ip} -> {dst_ip}\n"
+        	print(log_line.strip())
+        elif packet.haslayer(TCP):
+        	log_line = f"TCP Packet: {src_ip} -> {dst_ip}\n"
+        	print(log_line.strip())
+        elif packet.haslayer(UDP):
+        	log_line = f"UDP Packet: {src_ip} -> {dst_ip}\n"
+        	print(log_line.strip())
         
         
         #Writes the networked traffic to a file called network_log.txt
