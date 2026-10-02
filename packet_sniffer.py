@@ -1,4 +1,5 @@
 from scapy.all import IP, ICMP, sniff, TCP, UDP
+import sys
 
 
 packet_counts = {
@@ -72,10 +73,6 @@ def explain_flags(flag):
             # Reset, Push, and Acknowledgment
             return "Reset, Push, and Acknowledgment"
 
-        case "FA":
-            # Finish and Acknowledgment
-            return "Finish and Acknowledgment"
-
         case "FPA":
             # Finish, Push, and Acknowledgment
             return "Finish, Push, and Acknowledgment"
@@ -109,14 +106,8 @@ def packet_callback(packet):
         src_ip = packet[IP].src
         dst_ip = packet[IP].dst
         
-        global unique_source_IPs
-        global unique_destination_IPs
-        
-        if src_ip not in unique_source_IPs:
-        	unique_source_IPs.add(src_ip)
-        	
-        if dst_ip not in unique_destination_IPs:
-        	unique_destination_IPs.add(dst_ip)
+        unique_source_IPs.add(src_ip)
+        unique_destination_IPs.add(dst_ip)
 
         if packet.haslayer(ICMP):
 
@@ -151,44 +142,52 @@ def packet_callback(packet):
         with open("network_log.txt", "a") as f:
             f.write(log_line)
 
+def printSummary():
+	# Prints the capture summary
+	print("=" * 20, "Capture Summary", "=" * 20)
+	print()
 
-print("Starting packet capture... Press Ctrl+C to stop.")
+	total_packets = (
+	    packet_counts["ICMP"]
+	    + packet_counts["TCP"]
+	    + packet_counts["UDP"]
+	)
+
+	print("Total packets:", total_packets)
+
+	print()
+	print("ICMP:", packet_counts["ICMP"])
+	print("TCP:", packet_counts["TCP"])
+	print("UDP:", packet_counts["UDP"])
+
+	print()
+	print("Unique source IP's: ", len(unique_source_IPs))
+	print("Unique destination IP's: ", len(unique_destination_IPs))
+
+	print()
+	print("=" * 58)
+
 
 packet_count = int(
     input("Please enter the number of packets you want to track: ")
 )
 
+print("Starting packet capture... Press Ctrl+C to stop or wait for the number of packets to be sniffed.")
+
 
 # Change the BPF filter to listen for ICMP, TCP, or UDP
 # "ip" makes the BPF filter match the IPv4 check
 # inside packet_callback()
-sniff(
-    filter="ip and (icmp or tcp or udp)",
-    prn=packet_callback,
-    count=packet_count
-)
+try:
+	sniff(
+	    filter="ip and (icmp or tcp or udp)",
+	    prn=packet_callback,
+	    count=packet_count
+	)
+	
+except KeyboardInterrupt:
+	print()
+	printSummary()
+	sys.exit()
 
-
-# Prints the capture summary
-print("=" * 20, "Capture Summary", "=" * 20)
-print()
-
-total_packets = (
-    packet_counts["ICMP"]
-    + packet_counts["TCP"]
-    + packet_counts["UDP"]
-)
-
-print("Total packets:", total_packets)
-
-print()
-print("ICMP:", packet_counts["ICMP"])
-print("TCP:", packet_counts["TCP"])
-print("UDP:", packet_counts["UDP"])
-
-print()
-print("Unique source IP's: ", len(unique_source_IPs))
-print("Unique destination IP's: ", len(unique_destination_IPs))
-
-print()
-print("=" * 58)
+printSummary()
