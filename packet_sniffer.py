@@ -37,7 +37,8 @@ def packet_callback(packet):
 
 print("Starting packet capture... Press Ctrl+C to stop.")
 # Change the BPF filter to listen for icmp
-sniff(filter="icmp or tcp or udp", prn=packet_callback, count=100)
+packet_count = int(input("Please Enter the number of packets you want to track: "))
+sniff(filter="icmp or tcp or udp", prn=packet_callback, count=packet_count)
 
 
 print("=" * 20, "Capture Summary", "=" * 20)
@@ -47,4 +48,5 @@ print()
 print("ICMP: ", ICMP_count)
 print("TCP: ", TCP_count)
 print("UDP: ", UDP_count)
+print()
 print("=" * 58)
