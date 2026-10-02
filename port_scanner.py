@@ -35,6 +35,17 @@ try:
             print("Port {}: OPEN".format(port))
             service = socket.getservbyport(port)
             print(f"Service: {service}")
+            
+            # If HTTP, grab the banner from the existing target connection
+            if service == "http":
+            	try:
+            		# Construct a standard HTTP HEAD request targeting the scanned host
+            		http_request = f"HEAD / HTTP/1.1\r\nHost: {remoteServer}\r\nConnection: close\r\n\r\n"
+            		sock.sendall(http_request.encode('utf-8'))
+            		banner = sock.recv(1024)
+            		print(f"Banner:\n{banner.decode('utf-8', errors='ignore')}")
+            	except socket.error:
+            		print("Failed to retrieve HTTP banner.")
         sock.close()
 
 except KeyboardInterrupt:
