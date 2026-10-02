@@ -10,9 +10,12 @@ These Are meant to be run in Kali.
 Used to scan ports.
 
 ### Packet Sniffer
-
 Run the packet sniffer with:
 sudo python3 .../Port-manager/packet_sniffer.py
+
+The Packet sniffer dispalys the info in the form of:
+(Packet Type) Packet: source.port -> destination.port | Flags: Flag description
+Flags are only displyed for TCP packets
 
 Here are several commands that can be run in Kali to test the packet sniffer:
 
