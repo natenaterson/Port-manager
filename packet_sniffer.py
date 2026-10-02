@@ -172,6 +172,17 @@ packet_count = int(
     input("Please enter the number of packets you want to track: ")
 )
 
+while True:
+    try:
+        packet_count = int(input("Please enter the number of packets you want to track: "))
+        if packet_count < 0:
+            print("Please enter a positive number.")
+            continue
+        break  # Exits the loop if the input is valid
+    except ValueError:
+        print("Invalid input! Please enter a valid whole number.")
+        
+        
 print("Starting packet capture... Press Ctrl+C to stop or wait for the number of packets to be sniffed.")
 
 
