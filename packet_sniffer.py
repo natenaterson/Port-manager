@@ -7,6 +7,8 @@ packet_counts = {
     "UDP": 0
 }
 
+unique_source_IPs = set()
+unique_destination_IPs = set()
 
 def explain_flags(flag):
     match flag:
@@ -106,15 +108,20 @@ def packet_callback(packet):
 
         src_ip = packet[IP].src
         dst_ip = packet[IP].dst
+        
+        global unique_source_IPs
+        global unique_destination_IPs
+        
+        if src_ip not in unique_source_IPs:
+        	unique_source_IPs.add(src_ip)
+        	
+        if dst_ip not in unique_destination_IPs:
+        	unique_destination_IPs.add(dst_ip)
 
         if packet.haslayer(ICMP):
 
-            log_line = (
-                f"ICMP Packet: {src_ip} -> {dst_ip}\n"
-            )
-
+            log_line = (f"ICMP Packet: {src_ip} -> {dst_ip}\n")
             print(log_line.strip())
-
             packet_counts["ICMP"] += 1
 
         elif packet.haslayer(TCP):
@@ -178,6 +185,10 @@ print()
 print("ICMP:", packet_counts["ICMP"])
 print("TCP:", packet_counts["TCP"])
 print("UDP:", packet_counts["UDP"])
+
+print()
+print("Unique source IP's: ", len(unique_source_IPs))
+print("Unique destination IP's: ", len(unique_destination_IPs))
 
 print()
 print("=" * 58)
