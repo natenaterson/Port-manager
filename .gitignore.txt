@@ -1,3 +1,0 @@
-network_log.txt
-*.pcap
-__pycache__/
