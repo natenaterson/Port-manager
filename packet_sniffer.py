@@ -18,6 +18,7 @@ packet_counts = {
 
 unique_source_IPs = set()
 unique_destination_IPs = set()
+total_bytes = 0
 
 def explain_flags(flag):
     match flag:
@@ -117,11 +118,19 @@ def packet_callback(packet):
         unique_source_IPs.add(src_ip)
         unique_destination_IPs.add(dst_ip)
         
-        #bytes = packet[
-
+        packet_bytes = len(bytes(packet))
+        
+        global total_bytes 
+        
+        total_bytes += packet_bytes
+        
         if packet.haslayer(ICMP):
 
-            log_line = (f"{datetime.now()} | ICMP Packet: {src_ip} -> {dst_ip}\n")
+            log_line = (
+            	f"{datetime.now()} | "
+            	f" ICMP Packet: {src_ip} -> {dst_ip} |"
+            	f"bytes: {packet_bytes}  \n"
+    	)
             print(log_line.strip())
             packet_counts["ICMP"] += 1
 
@@ -131,6 +140,7 @@ def packet_callback(packet):
             	f"{datetime.now()} | "
                 f"TCP Packet: {src_ip}:{packet[TCP].sport} -> "
                 f"{dst_ip}:{packet[TCP].dport} | "
+                f"bytes: {packet_bytes} | "
                 f"Flags: {explain_flags(packet[TCP].flags)}\n"
             )
 
@@ -143,8 +153,9 @@ def packet_callback(packet):
             log_line = (
             	f"{datetime.now()} | "
                 f"UDP Packet: {src_ip}:{packet[UDP].sport} -> "
-                f"{dst_ip}:{packet[UDP].dport}\n"
-            )
+                f"{dst_ip}:{packet[UDP].dport} | "
+                f"bytes: {packet_bytes} \n"
+	    )
 
             print(log_line.strip())
 
@@ -175,6 +186,10 @@ def printSummary():
 	print()
 	print("Unique source IP's: ", len(unique_source_IPs))
 	print("Unique destination IP's: ", len(unique_destination_IPs))
+	print()
+	
+	global total_bytes
+	print("Total bytes size: ", total_bytes)
 
 	print()
 	print("=" * 58)
