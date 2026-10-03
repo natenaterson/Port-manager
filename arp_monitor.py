@@ -19,14 +19,14 @@ def check_arp(packet):
 	
 	if packet_IP in IP_to_MAC:
 		if IP_to_MAC[packet_IP] != mac:
-			if MAC in alerts.get(packet_IP, ()):
+			if mac in alerts.get(packet_IP, ()):
 				return []
 			else:
 				alerts[packet_IP] = alerts.get(packet_IP, ()) + (mac,)
-				return [f"alert {packet_IP} old mac {IP_to_MAC[IP]} new mac: {MAC}"]
+				return [f"alert {packet_IP} old mac {IP_to_MAC[packet_IP]} new mac: {mac}"]
 	else:
 		IP_to_MAC[packet_IP] = mac
-		return []
+	return []
 
 def reset_arp_state():
 	IP_to_MAC.clear()

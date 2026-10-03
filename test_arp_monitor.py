@@ -14,7 +14,8 @@ import unittest
 
 from scapy.all import ICMP, IP, Ether
 
-import packet_sniffer as ps
+import arp_monitor as ps
+
 from arp_test_traffic import (
     ATTACKER_MAC, GW_IP, GW_MAC, HOST_IP, HOST_MAC, PROBE_MAC,
     build_scenario, make_arp,

@@ -35,3 +35,10 @@ Here are several commands that can be run in Kali to test the packet sniffer:
 |UDP		|nslookup example.com		|DNS traffic, commonly UDP port 53|
 |ICMP		|ping -c 4 8.8.8.8		|ICMP Echo Requests and Replies|
 |ICMP		|ping -c 100 google.com		|ICMP Echo Requests and Replies|
+
+
+### Arp Monitor
+The test classes for the arp monitor were written by claude.
+To test the arp montior run python3 -m unittest -v test_arp_monitor
+An Arp montior is something that checks packes to see if a decivice is using multiple IPs.
+Checks if a packet's IP has be in the netwrok previouslly and used a different mac address before.
