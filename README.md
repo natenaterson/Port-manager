@@ -15,6 +15,7 @@ Run the packet sniffer with:
 sudo python3 .../Port-manager/packet_sniffer.py
 
 The Packet sniffer dispalys the info in the form of:
+
 (Date and time) | (Packet Type) Packet: source.port -> destination.port | bytes: (bytes) | Flags: Flag description
 Flags are only displyed for TCP packets.
 Port is displayed for TCP, and UDP.

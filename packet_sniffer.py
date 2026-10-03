@@ -5,222 +5,185 @@ This is written by Nate Montgomery
 Created on October 2, 2026.
 """
 
-from scapy.all import IP, ICMP, sniff, TCP, UDP
+import logging
+import os
 import sys
 from datetime import datetime
 
+from scapy.all import ICMP, IP, TCP, UDP, sniff
+
+log_file = "network_log.txt"
+
+BPF_filter = "ip and (icmp or tcp or udp)"
+
+# One entry per single TCP flag. Combinations are built from these
+# so every possible combination is handled automatically.
+TCP_flag_names = {
+    "F": "Finish",                      # Connection is closing
+    "S": "Synchronize",                 # Starts the 3 way handshake
+    "R": "Reset",                       # Abort a connection due to error
+    "P": "Push",                        # Push data to the application layer
+    "A": "Acknowledgment",              # Confirms data was successfully sent
+    "U": "Urgent",                      # Urgent pointer field is valid
+    "E": "ECN-Echo",                    # Signals that the host is Explicit Congestion Notification capable or has received a congestion notification
+    "C": "Congestion Window Reduced",   # Acknowledges the ECN echo
+    "N": "Nonce Sum",                   # Protects against hidden or malicious concealment of congestion signals
+}
 
 packet_counts = {
     "ICMP": 0,
     "TCP": 0,
-    "UDP": 0
+    "UDP": 0,
 }
 
-unique_source_IPs = set()
-unique_destination_IPs = set()
+unique_source_ips = set()
+unique_destination_ips = set()
 total_bytes = 0
 
-def explain_flags(flag):
-    match flag:
-        case "S":
-            # Starts a 3 way handshake
-            return "Synchronize"
+logger = logging.getLogger("packet_sniffer")
 
-        case "A":
-            # Confirms a packet or data was succesefully sent
-            return "Acknowledgment"
+#This method was written by Calude
+def setup_logging():
+    """Open the log file once. Every packet is then written through it."""
+    handler = logging.FileHandler(log_file, encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
 
-        case "SA":
-            # Synchronize and Acknowledges
-            return "Synchronize and Acknowledgment"
+#This method was written by Calude
+def explain_flags(flags):
+    """Turn Scapy TCP flags such as 'SA' into readable names."""
+    letters = str(flags)
+    if not letters:
+        return "No Flag"
+    names = [TCP_flag_names.get(letter, f"Unknown({letter})") for letter in letters]
+    return " + ".join(names)
 
-        case "PA":
-            # Push and Acknowledgment
-            # Tells the reciver to process data
-            return "Push and Acknowledgment"
-
-        case "FA":
-            # Finish and Acknowledgment
-            # Signals that one side is clsoing the connection
-            return "Finish and Acknowledgment"
-
-        case "F":
-            # Connection is closing
-            return "Finish"
-
-        case "R":
-            # Abort a connection due to error
-            return "Reset"
-
-        case "P":
-            # Push data to the application layer
-            return "Push"
-
-        case "U":
-            # Urgent pointer field is valid
-            return "Urgent"
-
-        case "E":
-            # Signals that the host is Explicit Congestion Notification
-            # capable or has received a congestion notification
-            return "ECN-Echo"
-
-        case "C":
-            # Acknowledges the echo
-            return "Congestion Window Reduced"
-
-        case "N":
-            # Protection against hidden or malicious concealment
-            # of congestion signals
-            return "Nonce Sum"
-            
-        case "RA":
-            # Reset and Acknowledgment
-            return "Reset and Acknowledgment"
-
-        case "RPA":
-            # Reset, Push, and Acknowledgment
-            return "Reset, Push, and Acknowledgment"
-
-        case "FPA":
-            # Finish, Push, and Acknowledgment
-            return "Finish, Push, and Acknowledgment"
-
-        case "FS":
-            # Finish and Synchronize
-            return "Finish and Synchronize"
-
-        case "FSA":
-            # Finish, Synchronize, and Acknowledgment
-            return "Finish, Synchronize, and Acknowledgment"
-
-        case _:
-            # Handles TCP flag combinations that are not
-            # explicitly listed above
-            return f"Unknown/Combined Flags: {flag}"
-
-
+"""
+Handles the packet collecting information.
+This is the most important method in the file.
+"""
 def packet_callback(packet):
+    global total_bytes
 
-    # Check for IP and (ICMP (Ping) or TCP or UDP)
-    # ICMP is networking Layer 3
-    # TCP is reliable data Layer 4. Eg text, email
-    # UDP is fast Layer 4. Eg video, streaming
-    if packet.haslayer(IP) and (
-        packet.haslayer(ICMP)
-        or packet.haslayer(TCP)
-        or packet.haslayer(UDP)
-    ):
+    # Only handle IPv4 packets that carry ICMP (ping), TCP or UDP.
+    # ICMP is networking layer 3.
+    # TCP is reliable layer 4 data. Eg text, email.
+    # UDP is fast layer 4 data. Eg video, streaming.
+    if not packet.haslayer(IP):
+        return
 
-        src_ip = packet[IP].src
-        dst_ip = packet[IP].dst
-        
-        unique_source_IPs.add(src_ip)
-        unique_destination_IPs.add(dst_ip)
-        
-        packet_bytes = len(bytes(packet))
-        
-        global total_bytes 
-        
-        total_bytes += packet_bytes
-        
-        if packet.haslayer(ICMP):
+    if packet.haslayer(ICMP):
+        protocol = "ICMP"
+        src = packet[IP].src
+        dst = packet[IP].dst
+        extra = ""
+    elif packet.haslayer(TCP):
+        protocol = "TCP"
+        src = f"{packet[IP].src}:{packet[TCP].sport}"
+        dst = f"{packet[IP].dst}:{packet[TCP].dport}"
+        extra = f" | Flags: {explain_flags(packet[TCP].flags)}"
+    elif packet.haslayer(UDP):
+        protocol = "UDP"
+        src = f"{packet[IP].src}:{packet[UDP].sport}"
+        dst = f"{packet[IP].dst}:{packet[UDP].dport}"
+        extra = ""
+    else:
+        return
 
-            log_line = (
-            	f"{datetime.now()} | "
-            	f" ICMP Packet: {src_ip} -> {dst_ip} |"
-            	f"bytes: {packet_bytes}  \n"
-    	)
-            print(log_line.strip())
-            packet_counts["ICMP"] += 1
+    unique_source_ips.add(packet[IP].src)
+    unique_destination_ips.add(packet[IP].dst)
 
-        elif packet.haslayer(TCP):
+    packet_bytes = len(packet)
+    total_bytes += packet_bytes
+    packet_counts[protocol] += 1
 
-            log_line = (
-            	f"{datetime.now()} | "
-                f"TCP Packet: {src_ip}:{packet[TCP].sport} -> "
-                f"{dst_ip}:{packet[TCP].dport} | "
-                f"bytes: {packet_bytes} | "
-                f"Flags: {explain_flags(packet[TCP].flags)}\n"
-            )
+    timestamp = datetime.fromtimestamp(float(packet.time))
 
-            print(log_line.strip())
+    log_line = (
+        f"{timestamp} | {protocol:<4} | {src} -> {dst} | "
+        f"Bytes: {packet_bytes}\t{extra}"
+    )
 
-            packet_counts["TCP"] += 1
+    print(log_line)
+    logger.info(log_line)
 
-        elif packet.haslayer(UDP):
+"""
+Prints the Summary at the of the packet collection.
+"""
+def print_summary():
+    print("=" * 20, "Capture Summary", "=" * 20)
+    print()
 
-            log_line = (
-            	f"{datetime.now()} | "
-                f"UDP Packet: {src_ip}:{packet[UDP].sport} -> "
-                f"{dst_ip}:{packet[UDP].dport} | "
-                f"bytes: {packet_bytes} \n"
-	    )
+    print("Total packets:", sum(packet_counts.values()))
 
-            print(log_line.strip())
+    print()
+    print("ICMP:", packet_counts["ICMP"])
+    print("TCP:", packet_counts["TCP"])
+    print("UDP:", packet_counts["UDP"])
 
-            packet_counts["UDP"] += 1
+    print()
+    print("Unique source IPs:", len(unique_source_ips))
+    print("Unique destination IPs:", len(unique_destination_ips))
 
-        # Writes the networked traffic to a file called network_log.txt
-        with open("network_log.txt", "a") as f:
-            f.write(log_line)
+    print()
+    print("Total bytes:", total_bytes)
 
-def printSummary():
-	# Prints the capture summary
-	print("=" * 20, "Capture Summary", "=" * 20)
-	print()
+    print()
+    print("=" * 58)
 
-	total_packets = (
-	    packet_counts["ICMP"]
-	    + packet_counts["TCP"]
-	    + packet_counts["UDP"]
-	)
-
-	print("Total packets:", total_packets)
-
-	print()
-	print("ICMP:", packet_counts["ICMP"])
-	print("TCP:", packet_counts["TCP"])
-	print("UDP:", packet_counts["UDP"])
-
-	print()
-	print("Unique source IP's: ", len(unique_source_IPs))
-	print("Unique destination IP's: ", len(unique_destination_IPs))
-	print()
-	
-	global total_bytes
-	print("Total bytes size: ", total_bytes)
-
-	print()
-	print("=" * 58)
-
-while True:
-    try:
-        packet_count = int(input("Please enter the number of packets you want to track: "))
-        if packet_count < 0:
-            print("Please enter a positive number.")
+"""
+Gets the input of the file to know how many pakcets need to be checked.
+"""
+def get_packet_count():
+    """Ask how many packets to capture. 0 means capture until Ctrl+C."""
+    while True:
+        try:
+            count = int(input(
+                "Please enter the number of packets you want to track "
+                "(0 is until ctrl+C): "
+            ))
+        except ValueError:
+            print("Invalid input! Please enter a valid whole number.")
             continue
-        break  # Exits the loop if the input is valid
-    except ValueError:
-        print("Invalid input! Please enter a valid whole number.")
-        
-        
-print("Starting packet capture... Press Ctrl+C to stop or wait for the number of packets to be sniffed.")
+        except (KeyboardInterrupt, EOFError):
+            print("\nCancelled.")
+            sys.exit(0)
+        if count < 0:
+            print("Please enter 0 or a positive number.")
+            continue
+        return count
+
+"""
+This is the main function that starts the program.
+"""
+def main():
+    # Sniffing needs raw socket access. Needs admin acess.
+    if os.geteuid() != 0:
+        sys.exit("This program must be run as root. Try: sudo python3 packet_sniffer.py")
+
+    packet_count = get_packet_count()
+    setup_logging()
+
+    print("Starting packet capture... Press Ctrl+C to stop "
+          "or wait for the number of packets to be sniffed.")
+
+    try:
+        # store=False keeps Scapy from holding every packet in memory.
+        sniff(
+            filter=BPF_filter,
+            prn=packet_callback,
+            count=packet_count,
+            store=False,
+        )
+    except KeyboardInterrupt:
+        print()
+    finally:
+        # Runs whether the count finished or Ctrl+C was pressed,
+        # so the summary prints exactly once.
+        print_summary()
 
 
-# Change the BPF filter to listen for ICMP, TCP, or UDP
-# "ip" makes the BPF filter match the IPv4 check
-# inside packet_callback()
-try:
-	sniff(
-	    filter="ip and (icmp or tcp or udp)",
-	    prn=packet_callback,
-	    count=packet_count
-	)
-	
-except KeyboardInterrupt:
-	print()
-	printSummary()
-	sys.exit()
-
-printSummary()
+#This was written by calude
+if __name__ == "__main__":
+    main()
