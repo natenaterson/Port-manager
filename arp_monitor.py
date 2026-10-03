@@ -5,23 +5,20 @@ IP_to_MAC = {}
 alerts = {}
 
 def check_arp(packet):
-	if not packet.haslayer(ARP) or packet.haslayer(Ether):
+	if not packet.haslayer(ARP):
 		return []
-	if packet.haslayer(ARP):
-		packet_arp = packet[ARP]
-
-		mac = packet_arp.hwsrc
-		mac = mac.lower()
-	else:
-		packet_arp = packet[Ether]
-
-		mac = packet[Ether].src
-		mac = mac.lower()
+	packet_arp = packet[ARP]
 	
 	if packet_arp.psrc == "0.0.0.0":
 		return []
 	
+	mac = packet_arp.hwsrc
+	mac = mac.lower()
+	
 	packet_IP = packet_arp.psrc
+	
+	if packet.haslayer(Ether) and packet[Ether].src.lower() != mac:
+		return [f"alert {packet_IP} the mac is {mac} the ethernet is {packet[Ether].src.lower()}"]
 	
 	if packet_IP in IP_to_MAC:
 		if IP_to_MAC[packet_IP] != mac:
