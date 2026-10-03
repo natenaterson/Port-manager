@@ -10,6 +10,7 @@ These Are meant to be run in Kali.
 Used to scan ports.
 
 ### Packet Sniffer
+This is a packet sniffer that relies on scapy.
 Run the packet sniffer with:
 sudo python3 .../Port-manager/packet_sniffer.py
 
@@ -19,6 +20,7 @@ Flags are only displyed for TCP packets.
 Port is displayed for TCP, and UDP.
 
 At the end it will display the summary of the Packet information.
+The date and time the packet was captured.
 The number of packets.
 The nubmer of TCP, UDP, and ICMP.
 The number of unique source and destination IPs.

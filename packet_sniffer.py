@@ -1,5 +1,13 @@
+"""
+packet_sniffer.py
+This file is a packet sniffer for reading packet info on a screen.
+This is written by Nate Montgomery
+Created on October 2, 2026.
+"""
+
 from scapy.all import IP, ICMP, sniff, TCP, UDP
 import sys
+from datetime import datetime
 
 
 packet_counts = {
@@ -108,16 +116,19 @@ def packet_callback(packet):
         
         unique_source_IPs.add(src_ip)
         unique_destination_IPs.add(dst_ip)
+        
+        #bytes = packet[
 
         if packet.haslayer(ICMP):
 
-            log_line = (f"ICMP Packet: {src_ip} -> {dst_ip}\n")
+            log_line = (f"{datetime.now()} | ICMP Packet: {src_ip} -> {dst_ip}\n")
             print(log_line.strip())
             packet_counts["ICMP"] += 1
 
         elif packet.haslayer(TCP):
 
             log_line = (
+            	f"{datetime.now()} | "
                 f"TCP Packet: {src_ip}:{packet[TCP].sport} -> "
                 f"{dst_ip}:{packet[TCP].dport} | "
                 f"Flags: {explain_flags(packet[TCP].flags)}\n"
@@ -130,6 +141,7 @@ def packet_callback(packet):
         elif packet.haslayer(UDP):
 
             log_line = (
+            	f"{datetime.now()} | "
                 f"UDP Packet: {src_ip}:{packet[UDP].sport} -> "
                 f"{dst_ip}:{packet[UDP].dport}\n"
             )
@@ -166,11 +178,6 @@ def printSummary():
 
 	print()
 	print("=" * 58)
-
-
-packet_count = int(
-    input("Please enter the number of packets you want to track: ")
-)
 
 while True:
     try:
