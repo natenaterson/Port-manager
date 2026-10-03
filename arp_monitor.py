@@ -1,19 +1,25 @@
-from scapy.all import ARP
+from scapy.all import ARP, Ether
 
 IP_to_MAC = {}
 
 alerts = {}
 
 def check_arp(packet):
-	if not packet.haslayer(ARP):
+	if not packet.haslayer(ARP) or packet.haslayer(Ether):
 		return []
-	packet_arp = packet[ARP]
+	if packet.haslayer(ARP):
+		packet_arp = packet[ARP]
+
+		mac = packet_arp.hwsrc
+		mac = mac.lower()
+	else:
+		packet_arp = packet[Ether]
+
+		mac = packet[Ether].src
+		mac = mac.lower()
 	
 	if packet_arp.psrc == "0.0.0.0":
 		return []
-	
-	mac = packet_arp.hwsrc
-	mac = mac.lower()
 	
 	packet_IP = packet_arp.psrc
 	
